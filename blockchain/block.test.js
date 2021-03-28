@@ -83,5 +83,39 @@ describe('Block', () => {
         it('resolves if block is valid', () => {            
             expect(Block.validateBlock({ lastBlock, block })).resolves;
         });
+
+        it('rejects when parent hash is invalid', () => {
+            block.blockHeaders.parentHash = 'foo';
+            expect(Block.validateBlock({ lastBlock, block }))
+                .rejects
+                .toMatchObject({ message: "The parent hash must be a hash of the last block's headers" })
+        })
+        
+        it('rejects when number is not increased by one', () => {
+            block.blockHeaders.number = 500;
+            expect(Block.validateBlock({ lastBlock, block }))
+                .rejects
+                .toMatchObject({ message: "The block must increment the numebr by one" })
+        })
+
+        it('rejects when difficulty ajdusts by more than one', () => {
+            block.blockHeaders.difficulty = 500;
+            expect(Block.validateBlock({ lastBlock, block }))
+                .rejects
+                .toMatchObject({ message: "The difficulty must only adjust by one" })
+        })
+
+        it('rejects when proof of work requirement is not met', () => {
+            const originalCalculateBlockTargetHash = Block.calculateBlockTargetHash;
+
+            Block.calculateBlockTargetHash = () => {
+                return '0'.repeat(64);
+            }
+            expect(Block.validateBlock({ lastBlock, block }))
+            .rejects
+            .toMatchObject({ message: "The block does not meet the proof of work requirement" })
+
+            Block.calculateBlockTargetHash = originalCalculateBlockTargetHash;
+        })
     });
 });
