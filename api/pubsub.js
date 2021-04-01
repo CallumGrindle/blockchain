@@ -1,15 +1,18 @@
 const PubNub = require('pubnub');
 const { PUBNUB_CREDENTIALS } = require('../keys');
+const Transaction = require('../transaction');
 
 const CHANNELS_MAP = {
     TEST: "TEST",
-    BLOCK: "BLOCK"
+    BLOCK: "BLOCK",
+    TRANSACTION: "TRANSACTION"
 };
 
 class PubSub {
-    constructor({ blockchain }) {
+    constructor({ blockchain, transactionQueue }) {
         this.pubnub = new PubNub(PUBNUB_CREDENTIALS);
         this.blockchain = blockchain;
+        this.transactionQueue = transactionQueue;
         this.subscribeToChannels();
         this.listen();
     }
@@ -40,6 +43,12 @@ class PubSub {
                             .then(() => console.log('New block accepted'))
                             .catch(error => console.error('New block rejected:', error.message));
                         break;
+                    case CHANNELS_MAP.TRANSACTION:
+                        console.log(`Recieved transaction: ${parsedMessage.id}`);
+
+                        this.transactionQueue.add(new Transaction(parsedMessage));
+                        
+                        break;
                     default:
                         return;
                 }
@@ -52,6 +61,13 @@ class PubSub {
             channel: CHANNELS_MAP.BLOCK,
             message: JSON.stringify(block)
         });
+    }
+
+    broadcastTransaction(transaction) {
+        this.publish({
+            channel: CHANNELS_MAP.TRANSACTION,
+            message: JSON.stringify(transaction)
+        })
     }
 }
 
