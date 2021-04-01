@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon ./api",
+    "dev-peer": "nodemon ./api --peer",
     "start": "node ./api/index",
     "test": "jest --watchAll"
   },
@@ -12,9 +13,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "elliptic": "^6.5.4",
     "express": "^4.17.1",
     "jest": "^26.6.3",
-    "js-sha3": "^0.8.0"
+    "js-sha3": "^0.8.0",
+    "pubnub": "^4.29.11",
+    "request": "^2.88.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.7"

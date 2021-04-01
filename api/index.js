@@ -1,9 +1,12 @@
 const express = require('express');
 const Blockchain = require('../blockchain');
 const Block = require('../blockchain/block');
+const PubSub = require('./pubsub');
+const request = require('request');
 
 const app = express();
 const blockchain = new Blockchain();
+const pubsub = new PubSub({ blockchain });
 
 app.get('/blockchain', (req, res, next) => {
     const { chain } = blockchain;
@@ -17,6 +20,8 @@ app.get('/blockchain/mine', (req, res, next) => {
 
     blockchain.addBlock({ block })
         .then(() => {
+            pubsub.broadcastBlock(block);
+
             res.json({ block })
         })
         .catch(next);
@@ -28,5 +33,16 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: err.message })
 })
 
-const PORT = 3000;
+const peer = process.argv.includes('--peer');
+const PORT = peer ? Math.floor(2000 + Math.random() * 1000) : 3000;
+
+if (peer) {
+    request('http://localhost:3000/blockchain', (error, response, body) => {        
+        const { chain } = JSON.parse(body);
+
+        blockchain.replaceChain({ chain })
+            .then(() => console.log('Synchronised blockchain with the root node'))
+            .catch(error => console.log('Synchronisation error:', error.message));
+    }); 
+}
 app.listen(PORT, () => console.log(`Listening at PORT: ${PORT}`));
