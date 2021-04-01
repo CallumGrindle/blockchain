@@ -9,6 +9,9 @@
     "start": "node ./api/index",
     "test": "jest --watchAll"
   },
+  "jest": {
+    "testEnvironment": "node"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
