@@ -14,7 +14,18 @@ const postTransact = ({ to, value }) => {
     });
 }
 
-postTransact({})
+
+getMine = () => {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            request(`${BASE_URL}/blockchain/mine`, (error, response, body) => {
+                return resolve(JSON.parse(body));
+            });
+        }, 1000);
+    });
+}
+
+postTransact({})    
     .then(postTransactionResponse => {
         console.log('postTransactionResponse (Create Account Transaction)', postTransactionResponse);
 
@@ -24,4 +35,10 @@ postTransact({})
     })
     .then(postTransactionResponse2 => {
         console.log('postTransactionResponse2 (Standard Transaction)', postTransactionResponse2);
+
+        return getMine();
+    })
+    .then(getMineResponse => {
+        console.log('getMineResponse', getMineResponse);
     });
+
