@@ -25,11 +25,20 @@ getMine = () => {
     });
 }
 
+let toAccountData;
+
 postTransact({})    
     .then(postTransactionResponse => {
-        console.log('postTransactionResponse (Create Account Transaction)', postTransactionResponse);
+        console.log(
+            'postTransactionResponse (Create Account Transaction)', 
+            postTransactionResponse
+        );
 
-        const toAccountData = postTransactionResponse.transaction.data.accountData;
+        toAccountData = postTransactionResponse.transaction.data.accountData;
+
+        return getMine();
+    }).then(getMineResponse => {
+        console.log('getMineResponse', getMineResponse);
 
         return postTransact({ to: toAccountData.address, value: 20 });
     })
@@ -38,7 +47,7 @@ postTransact({})
 
         return getMine();
     })
-    .then(getMineResponse => {
-        console.log('getMineResponse', getMineResponse);
+    .then(getMineResponse2 => {
+        console.log('getMineResponse2', getMineResponse2);
     });
 

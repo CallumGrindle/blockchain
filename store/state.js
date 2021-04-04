@@ -8,6 +8,14 @@ class State {
     putAccount({ address, accountData }) {
         this.stateTrie.put({ key: address, value: accountData });
     }
+
+    getAccount({ address }) {                        
+        return this.stateTrie.get({ key: address });
+    }
+
+    getStateRoot() {
+        return this.stateTrie.rootHash;
+    }
 }
 
-module.exports = State;
+module.exports = State; 
