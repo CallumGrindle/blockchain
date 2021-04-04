@@ -43,6 +43,10 @@ class Block {
         stateRoot
     }) {
         const target = Block.calculateBlockTargetHash({ lastBlock });
+        const miningRewardTransaction = Transaction.createTransaction({
+            beneficiary
+        });
+        transactionSeries.push(miningRewardTransaction);
         const transactionsTrie = Trie.buildTrie({ items: transactionSeries,  });
         let timestamp, truncatedBlockHeaders, header, nonce, underTargetHash;
 
