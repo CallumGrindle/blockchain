@@ -1,6 +1,7 @@
 const { GENESIS_DATA, MINE_RATE } = require('../config');
 const { keccakHash } = require('../util/index')
 const Transaction = require('../transaction');
+const Trie = require('../store/trie');
 
 const HASH_LENGTH = 64;
 const MAX_HASH_VALUE = parseInt('f'.repeat(HASH_LENGTH), 16);
@@ -42,6 +43,7 @@ class Block {
         stateRoot
     }) {
         const target = Block.calculateBlockTargetHash({ lastBlock });
+        const transactionsTrie = Trie.buildTrie({ items: transactionSeries,  });
         let timestamp, truncatedBlockHeaders, header, nonce, underTargetHash;
 
         do {
@@ -52,10 +54,7 @@ class Block {
                 difficulty: Block.adjustDifficulty({ lastBlock, timestamp }),
                 number: lastBlock.blockHeaders.number + 1,
                 timestamp,
-                /**
-                 * NOTE: the `trannsactionsRoot` will be refactored once Tries are implemented. 
-                 */
-                transactionsRoot: keccakHash(transactionSeries),
+                transactionsRoot: transactionsTrie.rootHash,
                 stateRoot
             };
             header = keccakHash(truncatedBlockHeaders);
@@ -74,7 +73,7 @@ class Block {
         return new Block(GENESIS_DATA);
     }
 
-    static validateBlock({ lastBlock, block }) {
+    static validateBlock({ lastBlock, block, state }) {
         return new Promise((resolve, reject) => {
             if (keccakHash(block) === keccakHash(Block.genesis())) {
                 return resolve();
@@ -92,6 +91,16 @@ class Block {
                 return reject(new Error("The difficulty must only adjust by one"));
             }
 
+            const rebuiltTransactionsTrie = Trie.buildTrie({ 
+                items: block.transactionSeries
+            });
+
+            if (rebuiltTransactionsTrie.rootHash !== block.blockHeaders.transactionsRoot) {
+                return reject(
+                    new Error(`The rebuilt transactions root does not match the block's transactions root: ${block.blockHeaders.transactionsRoot}`)
+                );
+            }
+
             const target = Block.calculateBlockTargetHash({ lastBlock });
             const { blockHeaders } = block;
             const { nonce } = blockHeaders;
@@ -101,8 +110,15 @@ class Block {
             const underTargetHash = keccakHash(header + nonce);
 
             if (underTargetHash > target) {
-                return reject(new Error('The block does not meet the proof of work requirement'));
+                return reject(new Error(
+                    'The block does not meet the proof of work requirement'
+                ));
             }
+
+            Transaction.validateTransactionSeries({ 
+                state, transactionSeries: block.transactionSeries
+             }).then(resolve)
+                .catch(reject);
 
             return resolve();
         });
