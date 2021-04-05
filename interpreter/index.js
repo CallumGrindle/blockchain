@@ -28,6 +28,22 @@ const OPCODE_MAP = {
     JUMPI
 };
 
+const OPCODE_GAS_MAP = {
+    STOP: 0,
+    ADD: 1,
+    SUB: 1,
+    MUL: 1,
+    DIV: 1,
+    PUSH: 0,
+    LT: 1,
+    GT: 1,
+    EQ: 1,
+    AND: 1,
+    OR: 1,
+    JUMP: 2,
+    JUMPI: 2
+};
+
 const EXECUTION_LIMIT = 10000
 const EXECUTION_COMPLETE = 'Execution complete';
 
@@ -55,6 +71,8 @@ class Interpreter {
     runCode(code) {
         this.state.code = code;
 
+        let gasUsed = 0;
+
         while (this.state.programCounter < this.state.code.length) {
             this.state.executionCount++;
 
@@ -63,6 +81,8 @@ class Interpreter {
             }
 
             const opCode = this.state.code[this.state.programCounter];
+
+            gasUsed += OPCODE_GAS_MAP[opCode];
 
             try {
                 switch (opCode) {
@@ -119,7 +139,10 @@ class Interpreter {
                 }
             } catch (error) {
                 if (error.message === EXECUTION_COMPLETE) {
-                    return this.state.stack[this.state.stack.length-1];
+                    return {
+                        result: this.state.stack[this.state.stack.length-1],
+                        gasUsed
+                    }
                 }
 
                 throw error;
@@ -132,56 +155,3 @@ class Interpreter {
 
 Interpreter.OPCODE_MAP = OPCODE_MAP;
 module.exports = Interpreter;
-
-// let code;
-
-// code = [PUSH, 2, PUSH, 3, MUL, STOP];
-// result = new Interpreter().runCode(code);
-// console.log(result);
-
-// code = [PUSH, 2, PUSH, 3, LT, STOP];
-// result = new Interpreter().runCode(code);
-// console.log('LT', result);
-
-// code = [PUSH, 2, PUSH, 3, GT, STOP];
-// result = new Interpreter().runCode(code);
-// console.log('GT', result);
-
-// code = [PUSH, 2, PUSH, 3, EQ, STOP];
-// result = new Interpreter().runCode(code);
-// console.log('EQ', result);
-
-// code = [PUSH, 2, PUSH, 2, EQ, STOP];
-// result = new Interpreter().runCode(code);
-// console.log('EQ', result);
-
-// code = [PUSH, 0, PUSH, 1, AND, STOP];
-// result = new Interpreter().runCode(code);
-// console.log('EQ', result);
-
-// code = [PUSH, 2, PUSH, 3, ADD, PUSH, 5, EQ, STOP];
-// result = new Interpreter().runCode(code);
-// console.log('EQ', result);
-
-// code = [PUSH, 6, JUMP, PUSH, 0, JUMP, PUSH, 'jump successful', STOP];
-// result = new Interpreter().runCode(code);
-// console.log('JUMP', result);
-
-// code = [PUSH, 8, PUSH, 1, JUMPI, PUSH, 0, JUMP, PUSH, 'jump successful', STOP];
-// result = new Interpreter().runCode(code);
-// console.log('JUMPI', result);
-
-// code = [PUSH, 0, PUSH];
-// try {
-//     new Interpreter().runCode(code);
-// } catch (error) {
-//     console.log(error.message);
-// }
-
-// code = [PUSH, 0, JUMP, STOP];
-// try {
-//     new Interpreter().runCode(code);
-// } catch (error) {
-//     console.log(error.message);
-// }
-

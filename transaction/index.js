@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { MINING_REWARD } = require('../config');
+const Interpreter = require('../interpreter');
 
 const TRANSACTION_TYPE_MAP = {
     CREATE_ACCOUNT: 'CREATE_ACCOUNT',
@@ -10,20 +11,22 @@ const TRANSACTION_TYPE_MAP = {
 const Account = require('../account');
 
 class Transaction {
-    constructor({ id, from, to, value, data, signature }) {
+    constructor({ id, from, to, value, data, signature, gasLimit }) {
         this.id = id || uuidv4();
         this.from = from || '-';
         this.to = to || '-';
         this.value = value || 0;
         this.data = data || '-';
         this.signature = signature || '-';
+        this.gasLimit = gasLimit || 0;
     }
 
-    static createTransaction({ account, to, value, beneficiary }) {
+    static createTransaction({ account, to, value, beneficiary, gasLimit }) {
         if (beneficiary) {
             return new Transaction({
                 to: beneficiary,
                 value: MINING_REWARD,
+                gasLimit,
                 data: { type: TRANSACTION_TYPE_MAP.MINING_REWARD }
             });
         }
@@ -33,7 +36,8 @@ class Transaction {
                 id: uuidv4(),
                 from: account.address,
                 to, 
-                value,
+                value: value || 0,
+                gasLimit: gasLimit || 0,
                 data: { type: TRANSACTION_TYPE_MAP.TRANSACT }
             }
             
@@ -53,9 +57,11 @@ class Transaction {
 
     static validateStandardTransaction({ state, transaction }) {
         return new Promise((resolve, reject) => {
-            const { id, from, signature, value, to } = transaction;
+            const { id, from, signature, value, to, gasLimit } = transaction;
             const transactionData = { ...transaction };
             delete transactionData.signature;
+
+
 
             if (!Account.verifySignature({ 
                 publicKey: from, 
@@ -67,9 +73,9 @@ class Transaction {
 
             const fromBalance = state.getAccount({ address: from }).balance;
 
-            if (value > fromBalance) {
+            if ((value + gasLimit) > fromBalance) {
                 return reject(new Error(
-                    `Transaction value: ${value} exceeds balance: ${fromBalance}`
+                    `Transaction value and gas limit: ${value} exceeds balance: ${fromBalance}`
                 ));
             }
 
@@ -79,6 +85,15 @@ class Transaction {
                 return reject(new Error(
                     `The to field: ${to} does not exist`
                 ));
+            }
+            if (toAccount.codeHash) {
+                const { gasUsed } = new Interpreter().runCode(toAccount.code);
+
+                if (gasUsed > gasLimit) {
+                    return reject(new Error(
+                        `Transaction needs more gas. Provided: ${gasLimit}. Needs: ${gasUsed}`
+                    ));
+                }
             }
 
             return resolve();
@@ -176,10 +191,24 @@ class Transaction {
         const fromAccount = state.getAccount({ address: transaction.from });
         const toAccount = state.getAccount({ address: transaction.to });
 
-        const { value } = transaction;
+
+        let gasUsed = 0;
+        let result;
+        if (toAccount.codeHash) {
+            const interpreter = new Interpreter();
+
+            ({ gasUsed, result } = interpreter.runCode(toAccount.code));
+            console.log(` -*- Smart contract execution: ${transaction.id} - RESULT: ${result}`);
+        }
+
+        const { value, gasLimit } = transaction;
+        const refund = gasLimit - gasUsed;
 
         fromAccount.balance -= value;
+        fromAccount.balance -= gasLimit;
+        fromAccount.balance += refund;
         toAccount.balance += value;
+        toAccount.balance += gasUsed;
 
         state.putAccount({ address: transaction.from, accountData: fromAccount })
         state.putAccount({ address: transaction.to, accountData: toAccount })
@@ -187,9 +216,9 @@ class Transaction {
 
     static runCreateAccountTransaction({ state, transaction }) {
         const { accountData } = transaction.data;
-        const { address } = accountData;        
+        const { address, codeHash } = accountData;        
 
-        state.putAccount({ address, accountData });
+        state.putAccount({ address: codeHash ? codeHash : address, accountData });
     }
 
     static runMiningRewardTransaction({ state, transaction }) {
