@@ -7,7 +7,7 @@ run peer (random port): `npm run dev-peer`**
 
 running a node will create an account within a transaction and sync previous blocks with other nodes
 
-transactions are added to blocks and added to the blockchain by mining
+transactions are added to blocks which are added to the blockchain by mining
 
 -----------------------------------------------------
 hit  GET `/blockchain` to view all blocks in the blockchain
