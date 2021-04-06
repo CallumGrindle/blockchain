@@ -3,7 +3,7 @@ a proof of concept blockchain based on Ethereum with smart contract functionalit
 
 run root node (port 3000): `npm run dev`**
 
-run peer (random port): `npm run dev-peer`**
+run peer node (random port): `npm run dev-peer`**
 
 running a node will create an account within a transaction and sync previous blocks with other nodes
 
